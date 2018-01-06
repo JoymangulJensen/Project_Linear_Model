@@ -118,6 +118,17 @@ new_df <- new_df[ , -which(names(new_df) %in% c(corr_desciptors_1))]
 new_df_obs <- new_df_obs[ , -which(names(new_df_obs) %in% c(corr_desciptors_1))]
 
 ###################################################################
+#                     Regression  Stepwise v1
+###################################################################
+lm.tot<-lm(reponse~., data=new_df_obs)
+lm.1=lm(reponse~1, data=new_df_obs)
+
+lm.stepwise = step(lm.1,scope=formula(lm.tot),direction='forward', steps = 3)
+PRESS.stepwise <- sum(abs(lm.stepwise$residuals))
+print(PRESS.stepwise)
+
+plot(lm.stepwise)
+###################################################################
 #                     Regression  Stepwise
 ###################################################################
 # Get number of descriptor
@@ -165,6 +176,7 @@ for (i in 2:n_descriptor_obs) {
 ###################################################################
 sum(best_reg_r2$residuals^2)
 sum(best_reg_press$residuals^2)
+sum(abs(best_reg_r2$residuals))
 summary(best_reg_r2)$r.squared
 summary(best_reg_press)$r.squared
 AIC(best_reg_r2)
@@ -172,6 +184,57 @@ AIC(best_reg_press)
 
 plot(best_reg_r2)
 plot(best_reg_press)
+
+###################################################################
+#           Regression  ‘Least Absolute Deviation' v1
+###################################################################
+install.packages("L1pack")
+library(L1pack)
+# Get number of descriptor
+n_descriptor_obs <- ncol(new_df_obs)
+
+lad_AIC <- matrix(nrow=n_descriptor_obs, ncol = 2)
+for (i in 2:n_descriptor_obs) {
+  reponse_str <- "reponse" 
+  formula <-paste(reponse_str, paste(colnames(new_df_obs)[i], collapse=" + "), sep=" ~ ") 
+  intermediate_lad = lad(formula, data=new_df_obs) 
+  lad_AIC[i, 1] =  AIC(intermediate_lad)
+  lad_AIC[i, 2] =  colnames(new_df_obs)[i]
+  colnames(new_df_obs)[i]
+}
+which.min(lad_AIC)
+selected_descriptor.ind1 <- which.min(lad_AIC)
+reponse_str <- "reponse" 
+formula <-paste(reponse_str, paste(colnames(new_df_obs)[selected_descriptor.ind1], collapse=" + "), sep=" ~ ") 
+
+lad_AIC <- matrix(nrow=n_descriptor_obs, ncol = 2)
+for (i in 2:n_descriptor_obs) {
+  if (i != selected_descriptor.ind1) {
+    intermediate_formula <- paste(formula, paste(colnames(new_df_obs)[i], collapse=" + "), sep=" + ")
+    intermediate_lad <- lad(intermediate_formula, data=new_df_obs) 
+    lad_AIC[i, 1] <-  AIC(intermediate_lad)
+    lad_AIC[i, 2] <-  colnames(new_df_obs)[i]
+  }
+}
+
+selected_descriptor.ind2 <- which.min(lad_AIC)
+formula <-paste(formula, paste(colnames(new_df_obs)[selected_descriptor.ind2], collapse=" + "), sep=" + ") 
+lad_AIC <- matrix(nrow=n_descriptor_obs, ncol = 2)
+for (i in 2:n_descriptor_obs) {
+  if (i != selected_descriptor.ind1 && i != selected_descriptor.ind2) {
+    intermediate_formula <- paste(formula, paste(colnames(new_df_obs)[i], collapse=" + "), sep=" + ")
+    intermediate_lad <- lad(intermediate_formula, data=new_df_obs) 
+    lad_AIC[i, 1] <-  AIC(intermediate_lad)
+    lad_AIC[i, 2] <-  colnames(new_df_obs)[i]
+  }
+}
+selected_descriptor.ind3 <- which.min(lad_AIC)
+formula <-paste(formula, paste(colnames(new_df_obs)[selected_descriptor.ind3], collapse=" + "), sep=" + ") 
+lad.stepwise <-  lad(formula, data=new_df_obs) 
+plot(lad.stepwise)
+test <- lad.stepwise$residuals * lad.stepwise$residuals 
+sum(test)
+
 
 ###################################################################
 #           Regression  ‘Least Absolute Deviation'
@@ -209,6 +272,7 @@ for (i in 2:n_descriptor_obs) {
   }
 }
 sum(best_reg$residuals^2)
+sum(abs(best_reg$residuals))
 summary(best_reg)
 plot(best_reg_r2$fitted.values, best_reg_r2$residuals,col = "red")
 lines(best_reg$fitted.values, best_reg$residuals)
@@ -248,8 +312,8 @@ boxplot(new_df_obs[,43],
 install.packages("ggplot2")
 library(ggplot2)
 fitted.values  <- best_reg_r2$fitted.values
-residuals_m1 <- best_reg_r2$residuals
-residuals_m2 <- best_reg$residuals
+residuals_m1 <- lm.stepwise$residuals
+residuals_m2 <- lad.stepwise$residuals
 dfplot <- data.frame(x,y1,y2)
 
 p <-ggplot(dfplot, aes(fitted.values)) +                    # basic graphical object
