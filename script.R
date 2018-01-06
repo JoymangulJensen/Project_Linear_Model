@@ -215,6 +215,32 @@ lines(best_reg$fitted.values, best_reg$residuals)
 
 sum(best_reg$residuals^2)
 
+###################################################################
+#             Draw box plots
+###################################################################
+# Draw bxplot for descriptor1
+boxplot(new_df_obs[,2],
+        main=colnames(new_df_obs)[2])
+
+# Draw bxplot for descriptor10
+boxplot(new_df_obs[,5],
+        main=colnames(new_df_obs)[5])
+
+# Draw bxplot for descriptor17
+boxplot(new_df_obs[,8],
+        main=colnames(new_df_obs)[8])
+
+# Draw bxplot for descriptor23
+boxplot(new_df_obs[,11],
+        main=colnames(new_df_obs)[11])
+
+# Draw bxplot for descriptor61
+boxplot(new_df_obs[,36],
+        main=colnames(new_df_obs)[36])
+
+# Draw bxplot for descriptor73
+boxplot(new_df_obs[,43],
+        main=colnames(new_df_obs)[43])
 
 ###################################################################
 #             Draw graph to compare models
@@ -222,15 +248,13 @@ sum(best_reg$residuals^2)
 install.packages("ggplot2")
 library(ggplot2)
 fitted.values  <- best_reg_r2$fitted.values
-residuals <- best_reg_r2$residuals
-y2 <- best_reg$residuals
+residuals_m1 <- best_reg_r2$residuals
+residuals_m2 <- best_reg$residuals
 dfplot <- data.frame(x,y1,y2)
 
 p <-ggplot(dfplot, aes(fitted.values)) +                    # basic graphical object
-  geom_point(aes(y=residuals), colour="red", show.legend = TRUE, size=3) +  # first layer
-  geom_point(aes(y=y2), colour="blue", size=3) +  # second layer
-  geom_hline(yintercept=0)
+  geom_point(aes(y=residuals_m1), colour="red", show.legend = TRUE, size=3) +  # first layer
+  geom_point(aes(y=residuals_m2), colour="blue", size=3) +  # second layer
+  geom_hline(yintercept=0, size=1, linetype="dashed")
 
-p + labs(x = "Valeurs prédites")
-p + xlab("My x label")
-p + labs(title = "Residuals vs valeurs prédites", subtitle = "Comparaison des deux models")
+p + labs(title = "Residuals vs valeurs prédites", subtitle = "Comparaison des deux models", x ="Valeurs prédites", y = "Residuals")
