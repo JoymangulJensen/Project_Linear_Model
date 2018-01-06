@@ -18,11 +18,13 @@ corr_desciptors <- matrix(nrow=n_descriptor)
 # Counter for number of correlates descriptor
 corr_desciptors_counter <- 0
 for (i in 1:n_descriptor) {
+  boxplot(df[,i])
   for (j in i:n_descriptor) {
     if(i != j) {
       reg0 = lm(df[,i] ~ df[,j], data=df)
+      print(colnames(df)[i])
       r2 <- summary(reg0)$r.squared
-      if (r2 > 0.95) {
+      if (r2 >= 0.95) {
         corr_desciptors_counter <- corr_desciptors_counter + 1
         corr_desciptors[corr_desciptors_counter, 1]= colnames(df)[i]
       }
@@ -123,7 +125,7 @@ n_descriptor_obs <- ncol(new_df_obs)
 
 # Init the R2
 best_r2 <- 0
-
+best_press <- 9999999
 for (i in 2:n_descriptor_obs) {
   for (j in i:n_descriptor_obs) {
     if(i != j) {
@@ -132,14 +134,23 @@ for (i in 2:n_descriptor_obs) {
           for (l in j:n_descriptor_obs) {
             if (k != l ) {
               reg0 = lm(new_df_obs[,1] ~ new_df_obs[,i] + new_df_obs[,j] + new_df_obs[,k] + new_df_obs[,l], data=new_df_obs)
+              current_press <- sum(reg0$residuals^2)
               r2 <- summary(reg0)$r.squared
-              if (r2 > best_r2) {PRESS(mod)
+              if (r2 > best_r2) {
 
                 best_r2 <- r2
-                best_variables_1 <- colnames(new_df_obs)[i]
-                best_variables_2 <- colnames(new_df_obs)[j]
-                best_variables_3 <- colnames(new_df_obs)[k]
-                best_reg <- reg0
+                best_variables_1_r2 <- colnames(new_df_obs)[i]
+                best_variables_2_r2 <- colnames(new_df_obs)[j]
+                best_variables_3_r2 <- colnames(new_df_obs)[k]
+                best_reg_r2 <- reg0
+              }
+              
+              if(current_press < best_press) {
+                best_press <- current_press
+                best_variables_1_press <- colnames(new_df_obs)[i]
+                best_variables_2_press <- colnames(new_df_obs)[j]
+                best_variables_3_press <- colnames(new_df_obs)[k]
+                best_reg_press <- reg0
               }
             }
           }
@@ -152,22 +163,74 @@ for (i in 2:n_descriptor_obs) {
 ###################################################################
 #                     Calculate the PRESS
 ###################################################################
-sum(best_reg$residuals^2)
+sum(best_reg_r2$residuals^2)
+sum(best_reg_press$residuals^2)
+summary(best_reg_r2)$r.squared
+summary(best_reg_press)$r.squared
+AIC(best_reg_r2)
+AIC(best_reg_press)
+
+plot(best_reg_r2)
+plot(best_reg_press)
 
 ###################################################################
 #           Regression  ‘Least Absolute Deviation'
 ###################################################################
-install.packages("Blossom")
-library(Blossom)
-obs <- new_df_obs[,1]
-descriptor_only <- new_df_obs[-c(1)]
-reponse_str <- "reponse"
-names <-  colnames(descriptor_only)
-formula <-paste(reponse_str, paste(names, collapse=" + "), sep=" ~ ")
+install.packages("L1pack")
+library(L1pack)
+# Get number of descriptor
+n_descriptor_obs <- ncol(new_df_obs)
 
-Out <- lad(formula,data = new_df_obs,test = TRUE)
+# Init the R2
+best_r2 <- 0
+best_press <- 9999999
+for (i in 2:n_descriptor_obs) {
+  for (j in i:n_descriptor_obs) {
+    if(i != j) {
+      for (k in j:n_descriptor_obs) {
+        if (j != k) {
+          for (l in j:n_descriptor_obs) {
+            if (k != l ) {
+              reg0 = lad(new_df_obs[,1] ~ new_df_obs[,i] + new_df_obs[,j] + new_df_obs[,k] + new_df_obs[,l], data=new_df_obs, method = "BR")
+              current_press <- sum(reg0$residuals^2)
+              
+              if(current_press < best_press) {
+                best_press <- current_press
+                best_variables_1 <- colnames(new_df_obs)[i]
+                best_variables_2 <- colnames(new_df_obs)[j]
+                best_variables_3 <- colnames(new_df_obs)[k]
+                best_reg <- reg0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+sum(best_reg$residuals^2)
+summary(best_reg)
+plot(best_reg_r2$fitted.values, best_reg_r2$residuals,col = "red")
+lines(best_reg$fitted.values, best_reg$residuals)
 
-summary(Out)
-residuals(Out)
-predict(Out)
-coefficients(Out)
+sum(best_reg$residuals^2)
+
+
+###################################################################
+#             Draw graph to compare models
+###################################################################
+install.packages("ggplot2")
+library(ggplot2)
+fitted.values  <- best_reg_r2$fitted.values
+residuals <- best_reg_r2$residuals
+y2 <- best_reg$residuals
+dfplot <- data.frame(x,y1,y2)
+
+p <-ggplot(dfplot, aes(fitted.values)) +                    # basic graphical object
+  geom_point(aes(y=residuals), colour="red", show.legend = TRUE, size=3) +  # first layer
+  geom_point(aes(y=y2), colour="blue", size=3) +  # second layer
+  geom_hline(yintercept=0)
+
+p + labs(x = "Valeurs prédites")
+p + xlab("My x label")
+p + labs(title = "Residuals vs valeurs prédites", subtitle = "Comparaison des deux models")
