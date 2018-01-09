@@ -124,7 +124,7 @@ lm.tot<-lm(reponse~., data=new_df_obs)
 lm.1=lm(reponse~1, data=new_df_obs)
 
 lm.stepwise = step(lm.1,scope=formula(lm.tot),direction='forward', steps = 3)
-PRESS.stepwise <- sum(abs(lm.stepwise$residuals))
+PRESS.stepwise <- sum(lm.stepwise$residuals * lm.stepwise$residuals)
 print(PRESS.stepwise)
 
 plot(lm.stepwise)
@@ -186,7 +186,7 @@ plot(best_reg_r2)
 plot(best_reg_press)
 
 ###################################################################
-#           Regression  ‘Least Absolute Deviation' v1
+#           Regression  ‘Least Absolute Deviation'
 ###################################################################
 install.packages("L1pack")
 library(L1pack)
@@ -231,8 +231,9 @@ for (i in 2:n_descriptor_obs) {
 selected_descriptor.ind3 <- which.min(lad_AIC)
 formula <-paste(formula, paste(colnames(new_df_obs)[selected_descriptor.ind3], collapse=" + "), sep=" + ") 
 lad.stepwise <-  lad(formula, data=new_df_obs) 
-plot(lad.stepwise)
-test <- lad.stepwise$residuals * lad.stepwise$residuals 
+plot(lad.stepwise$fitted.values, lad.stepwise$residuals, xlab = "Fitted values", ylab = "Residuals")
+abline(h=0, col="red")
+test <- abs(lad.stepwise$residuals) * abs(lad.stepwise$residuals) 
 sum(test)
 
 
@@ -311,10 +312,10 @@ boxplot(new_df_obs[,43],
 ###################################################################
 install.packages("ggplot2")
 library(ggplot2)
-fitted.values  <- best_reg_r2$fitted.values
+fitted.values  <- lm.stepwise$fitted.values
 residuals_m1 <- lm.stepwise$residuals
 residuals_m2 <- lad.stepwise$residuals
-dfplot <- data.frame(x,y1,y2)
+dfplot <- data.frame(fitted.values,residuals_m1,residuals_m2)
 
 p <-ggplot(dfplot, aes(fitted.values)) +                    # basic graphical object
   geom_point(aes(y=residuals_m1), colour="red", show.legend = TRUE, size=3) +  # first layer
