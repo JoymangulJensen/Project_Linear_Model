@@ -127,7 +127,10 @@ lm.stepwise = step(lm.1,scope=formula(lm.tot),direction='forward', steps = 3)
 PRESS.stepwise <- sum(lm.stepwise$residuals * lm.stepwise$residuals)
 print(PRESS.stepwise)
 
-plot(lm.stepwise)
+MAE.stepwise <- sum(abs(lm.stepwise$residuals))/ 25
+print(MAE.stepwise)
+AIC(lm.stepwise)
+
 ###################################################################
 #                     Regression  Stepwise
 ###################################################################
@@ -137,6 +140,7 @@ n_descriptor_obs <- ncol(new_df_obs)
 # Init the R2
 best_r2 <- 0
 best_press <- 9999999
+best_mae <- 99999999999999
 for (i in 2:n_descriptor_obs) {
   for (j in i:n_descriptor_obs) {
     if(i != j) {
@@ -147,6 +151,7 @@ for (i in 2:n_descriptor_obs) {
               reg0 = lm(new_df_obs[,1] ~ new_df_obs[,i] + new_df_obs[,j] + new_df_obs[,k] + new_df_obs[,l], data=new_df_obs)
               current_press <- sum(reg0$residuals^2)
               r2 <- summary(reg0)$r.squared
+              current_mae <- sum(abs(reg0$residuals))/ 25
               if (r2 > best_r2) {
 
                 best_r2 <- r2
@@ -162,6 +167,14 @@ for (i in 2:n_descriptor_obs) {
                 best_variables_2_press <- colnames(new_df_obs)[j]
                 best_variables_3_press <- colnames(new_df_obs)[k]
                 best_reg_press <- reg0
+              }
+              
+              if(current_mae < best_mae) {
+                best_mae <- current_mae
+                best_variables_1_mae <- colnames(new_df_obs)[i]
+                best_variables_2_mae <- colnames(new_df_obs)[j]
+                best_variables_3_mae <- colnames(new_df_obs)[k]
+                best_reg_mae <- reg0
               }
             }
           }
@@ -185,6 +198,9 @@ AIC(best_reg_press)
 plot(best_reg_r2)
 plot(best_reg_press)
 
+sum(abs(best_reg_r2$residuals))/ 25
+sum(abs(best_reg_press$residuals))/ 25
+sum(abs(best_reg_mae$residuals))/ 25
 ###################################################################
 #           Regression  ‘Least Absolute Deviation'
 ###################################################################
@@ -236,6 +252,11 @@ abline(h=0, col="red")
 test <- abs(lad.stepwise$residuals) * abs(lad.stepwise$residuals) 
 sum(test)
 
+MAE.stepwise <- sum(abs(lad.stepwise$residuals))/ 25
+
+(MAE.stepwise / mean(new_df_obs$reponse)) * 100
+print(MAE.stepwise)
+AIC(lad.stepwise)
 
 ###################################################################
 #           Regression  ‘Least Absolute Deviation'
@@ -248,6 +269,7 @@ n_descriptor_obs <- ncol(new_df_obs)
 # Init the R2
 best_r2 <- 0
 best_press <- 9999999
+best_mae <- 99999999999999
 for (i in 2:n_descriptor_obs) {
   for (j in i:n_descriptor_obs) {
     if(i != j) {
@@ -265,6 +287,14 @@ for (i in 2:n_descriptor_obs) {
                 best_variables_3 <- colnames(new_df_obs)[k]
                 best_reg <- reg0
               }
+              
+              if(current_mae < best_mae) {
+                best_mae <- current_mae
+                best_variables_1_mae <- colnames(new_df_obs)[i]
+                best_variables_2_mae <- colnames(new_df_obs)[j]
+                best_variables_3_mae <- colnames(new_df_obs)[k]
+                best_reg_mae <- reg0
+              }
             }
           }
         }
@@ -275,10 +305,13 @@ for (i in 2:n_descriptor_obs) {
 sum(best_reg$residuals^2)
 sum(abs(best_reg$residuals))
 summary(best_reg)
-plot(best_reg_r2$fitted.values, best_reg_r2$residuals,col = "red")
-lines(best_reg$fitted.values, best_reg$residuals)
-
+plot(best_reg$fitted.values, best_reg$residuals,col = "red")
+abline(h=0, col="blue")
 sum(best_reg$residuals^2)
+
+sum(abs(best_reg$residuals))/ 25
+
+AIC(best_reg)
 
 ###################################################################
 #             Draw box plots
@@ -322,4 +355,4 @@ p <-ggplot(dfplot, aes(fitted.values)) +                    # basic graphical ob
   geom_point(aes(y=residuals_m2), colour="blue", size=3) +  # second layer
   geom_hline(yintercept=0, size=1, linetype="dashed")
 
-p + labs(title = "Residuals vs valeurs prédites", subtitle = "Comparaison des deux models", x ="Valeurs prédites", y = "Residuals")
+p + labs(title = "Residuals vs valeurs prédites", subtitle = "Comparaison des deux models(rouge : regression stepwise / blue : regression LAD)", x ="Valeurs prédites", y = "Residuals")
